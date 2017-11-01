@@ -27,6 +27,7 @@ charla = ''
 host = ''
 port = 0
 sock = 0
+crypto = {}
 
 class SimpleCrypt:
     def __init__(self, INITKEY, CYCLES=3, BLOCK_SZ=126, KEY_ADV=0, KEY_MAGNITUDE=1):
@@ -193,15 +194,14 @@ class chatUDPApp(wx.App):
         if code == wx.WXK_LEFT:
             self.objHtml.AppendToPage(unicode('izquierda <br />'))
         elif code in (wx.WXK_RETURN, 370):
-            tmp = self.txtEntrada.GetValue()
-            tmp = crypto.Encrypt(tmp.encode('utf-8')).encode('hex').encode('utf-8')
-            self.sock.sendto(tmp, self.send_address)
             textoHTML = time.strftime("%H:%M:%S") + u' <strong><font face="dejavu sans" color="brown">T\xfa</font></strong>> ' + self.txtEntrada.GetValue() + '<br />'
             self.txtEntrada.SetValue('')
             self.objHtml.AppendToPage(unicode(textoHTML))
+            self.envioDatagrama(False)
         elif code == wx.WXK_ESCAPE:
             self.finalize()
             wx.GetApp().ExitMainLoop()
+            evt.Skip()
         else:
             self.envioPendiente = True
         evt.Skip()
@@ -211,6 +211,7 @@ class chatUDPApp(wx.App):
             # Buffer size is 8192. Change as needed.
             message, address = self.sock.recvfrom(8192)
             if message:
+                print address[0], "> ", message
                 decryp = SimpleCrypt(INITKEY=address[0], CYCLES=3, BLOCK_SZ=25, KEY_ADV=5, KEY_MAGNITUDE=1)
                 if message[-1] == chr(95):
                     message = message[:len(message)-1]
@@ -221,16 +222,21 @@ class chatUDPApp(wx.App):
                     message = decryp.Decrypt(message.decode('utf-8').decode('hex'))
                     textoHTML = time.strftime("%H:%M:%S") + ' <strong><font face="helvetica" color="green">' + contactos[address[0]] + '</font></strong>> ' + message.decode('utf-8') + '<br />'
                     self.objHtml.AppendToPage(unicode(textoHTML))
-                #print address[0], "> ", message
+                
         except:
             pass
         #Ahora enviamos el texto si hemos pulsado alguna tecla
         if self.envioPendiente:
-            usuarioCadena = self.txtEntrada.GetValue()
-            if len(usuarioCadena) >= 1:
-                usuarioCadena = crypto.Encrypt(usuarioCadena.encode('utf-8')).encode('hex').encode('utf-8') + chr(95)
-                self.sock.sendto(usuarioCadena, self.send_address)
-            self.envioPendiente = False
+            self.envioDatagrama(True)
+ 
+    def envioDatagrama(self, pulsacion):
+        usuarioCadena = self.txtEntrada.GetValue()
+        if len(usuarioCadena) >= 1:
+            usuarioCadena = self.crypto.Encrypt(usuarioCadena.encode('utf-8')).encode('hex').encode('utf-8') 
+            if pulsacion:
+                usuarioCadena += chr(95)
+        self.sock.sendto(usuarioCadena, self.send_address)
+        self.envioPendiente = False
 
     def initialize(self):
         self.res = xrc.XmlResource('chat.xrc')
@@ -250,6 +256,7 @@ class chatUDPApp(wx.App):
         self.objHtml.AppendToPage('<p style="font-family: calibri, serif; font-size:14pt; font-style:italic">')
         self.frame.SetDimensions(int(estado["x"]), int(estado["y"]), int(estado["width"]), int(estado["height"]))
         self.sock = escuchaUDP(host, port)
+        self.crypto = crypto
 
         #host = "10.0.2.15"
         #host = "192.168.5.51"
@@ -309,12 +316,16 @@ if __name__ == '__main__':
     MI_NUMERO = estado["mi_numero"]
     host = obtieneIPLocal()
     #Para pruebas borrar despues
-    host = '192.168.5.51'
+    #host = '192.168.5.51'
+    host = '192.168.0.40'
     crypto = SimpleCrypt(INITKEY=host, CYCLES=3, BLOCK_SZ=25, KEY_ADV=5, KEY_MAGNITUDE=1)
     port = int(estado["puerto"])
     print host
 
-    app = chatUDPApp()
-    app.GetFrame().Show()
-    app.GetFrame().SetTitle("escuchando en el puerto "+estado["puerto"])
+    #app = chatUDPApp()     
+    #app.GetFrame().Show()
+    #app.GetFrame().SetTitle("escuchando en el puerto "+estado["puerto"])
+    #app.MainLoop()     
+    app = wx.App()     
+    chatUDPApp().GetFrame().Show()
     app.MainLoop()
