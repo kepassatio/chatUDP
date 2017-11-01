@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<resource xmlns="http://www.wxwindows.org/wxxrc" version="2.3.0.1">
+	<object class="wxFrame" name="mainFrame">
+		<style>wxCAPTION|wxCLOSE_BOX|wxFRAME_NO_TASKBAR|wxFRAME_TOOL_WINDOW|wxRESIZE_BORDER|wxSYSTEM_MENU|wxTAB_TRAVERSAL</style>
+		<size>484,356</size>
+		<title></title>
+		<centered>1</centered>
+		<object class="wxPanel" name="panel">
+			<style>wxTAB_TRAVERSAL</style>
+			<object class="wxFlexGridSizer">
+				<rows>3</rows>
+				<cols>1</cols>
+				<vgap>0</vgap>
+				<hgap>0</hgap>
+				<growablecols>0</growablecols>
+				<growablerows>0</growablerows>
+				<object class="sizeritem">
+					<option>0</option>
+					<flag>wxALL|wxEXPAND</flag>
+					<border>1</border>
+					<object class="wxHtmlWindow" name="objHtml">
+						<style>wxHW_SCROLLBAR_AUTO|wxNO_BORDER</style>
+						<bg>#A0A0A0</bg>
+						<fg>#00ff00</fg>
+						<font>
+							<family>default</family>
+							<style>normal</style>
+							<weight>light</weight>
+							<underlined>0</underlined>
+						</font>
+					</object>
+				</object>
+				<object class="sizeritem">
+					<option>0</option>
+					<flag>wxALL|wxEXPAND</flag>
+					<border>0</border>
+					<object class="wxTextCtrl" name="txtEscribiendo">
+						<bg>#909090</bg>
+						<fg>#ffff00</fg>
+						<font>
+							<family>default</family>
+							<style>normal</style>
+							<weight>normal</weight>
+							<underlined>0</underlined>
+						</font>
+						<value></value>
+						<maxlength>0</maxlength>
+					</object>
+				</object>
+				<object class="sizeritem">
+					<option>0</option>
+					<flag>wxALL|wxEXPAND</flag>
+					<border>2</border>
+					<object class="wxTextCtrl" name="txtEntrada">
+						<bg>#000000</bg>
+						<fg>#00ff00</fg>
+						<font>
+							<family>default</family>
+							<style>normal</style>
+							<weight>normal</weight>
+							<underlined>0</underlined>
+						</font>
+						<value></value>
+						<maxlength>0</maxlength>
+					</object>
+				</object>
+			</object>
+		</object>
+	</object>
+</resource>
