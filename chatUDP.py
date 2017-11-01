@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 import wx
 from wx import xrc
 from hashlib import sha1
@@ -23,12 +22,15 @@ SECCION_CON = 'CONTACTOS'
 MI_NUMERO = 0
 estado = {}
 contactos = {}
-charla = ''
 host = ''
 port = 0
-sock = 0
 crypto = {}
 
+
+"""
+SimpleCrypt.py REV 3
+Author: A.J. Mayorga
+"""
 class SimpleCrypt:
     def __init__(self, INITKEY, CYCLES=3, BLOCK_SZ=126, KEY_ADV=0, KEY_MAGNITUDE=1):
         self.cycles         = CYCLES
@@ -206,7 +208,7 @@ class chatUDPApp(wx.App):
             self.envioPendiente = True
         evt.Skip()
 
-    def update(self, event):
+    def OnTimer(self, event):
         try:
             # Buffer size is 8192. Change as needed.
             message, address = self.sock.recvfrom(8192)
@@ -249,7 +251,7 @@ class chatUDPApp(wx.App):
         self.Bind(wx.EVT_KEY_UP, self.OnKey)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.update, self.timer)
+        self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
         self.timer.Start(100)
         self.txtEntrada.SetFocus()
         self.txtEntrada.SetSelection(-1, -1)
@@ -318,14 +320,13 @@ if __name__ == '__main__':
     #Para pruebas borrar despues
     #host = '192.168.5.51'
     host = '192.168.0.40'
+    #Inicializamos la clase para encriptar los mensajes. Comun a todos los remitentes
     crypto = SimpleCrypt(INITKEY=host, CYCLES=3, BLOCK_SZ=25, KEY_ADV=5, KEY_MAGNITUDE=1)
     port = int(estado["puerto"])
     print host
+    print obtieneIPLocal()
 
-    #app = chatUDPApp()     
-    #app.GetFrame().Show()
-    #app.GetFrame().SetTitle("escuchando en el puerto "+estado["puerto"])
-    #app.MainLoop()     
-    app = wx.App()     
-    chatUDPApp().GetFrame().Show()
-    app.MainLoop()
+    app = chatUDPApp()     
+    app.GetFrame().Show()
+    app.GetFrame().SetTitle("escuchando en el puerto "+estado["puerto"])
+    app.MainLoop()     
