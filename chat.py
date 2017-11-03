@@ -279,10 +279,7 @@ class chatUDPApp(wx.App):
     def finalize(self):
         self.timer.Stop()
         self.sock.close()
-<<<<<<< HEAD
         self.frame.finalize()
-=======
->>>>>>> d6ff3b526459e090c638afb5f22eeff4a1d753a2
         return True
 
 def LeerFicheroIni(fichero):
@@ -344,57 +341,6 @@ class chat(wx.Frame):
         self.finalize()
         evt.Skip()
 
-<<<<<<< HEAD
-=======
-    def OnKey(self, evt):
-        code = evt.GetKeyCode()
-        if code == wx.WXK_LEFT:
-            self.objHtml.AppendToPage(unicode('izquierda <br />'))
-        elif code in (wx.WXK_RETURN, 370):
-            textoHTML = time.strftime("%H:%M:%S") + u' <strong><font face="dejavu sans" color="brown">T\xfa</font></strong>> ' + self.txtEntrada.GetValue() + '<br />'
-            self.objHtml.AppendToPage(unicode(textoHTML))
-            self.envioDatagrama(False)
-            self.txtEntrada.SetValue('')
-        elif code == wx.WXK_ESCAPE:
-            self.finalize()
-            wx.GetApp().ExitMainLoop()
-            evt.Skip()
-        else:
-            self.envioPendiente = True
-        evt.Skip()
-
-    def OnTimer(self, event):
-        try:
-            # Buffer size is 8192. Change as needed.
-            message, address = self.sock.recvfrom(8192)
-            if message:
-                #print address[0], "> ", message
-                decryp = SimpleCrypt(INITKEY=address[0], CYCLES=3, BLOCK_SZ=25, KEY_ADV=5, KEY_MAGNITUDE=1)
-                if message[-1] == chr(95):
-                    message = message[:len(message)-1]
-                    message = decryp.Decrypt(message.decode('utf-8').decode('hex'))
-                    self.txtEscribiendo.SetValue(unicode(message.decode('utf-8')))
-                else:
-                    self.txtEscribiendo.SetValue('')
-                    message = decryp.Decrypt(message.decode('utf-8').decode('hex'))
-                    textoHTML = time.strftime("%H:%M:%S") + ' <strong><font face="helvetica" color="green">' + contactos[address[0]] + '</font></strong>> ' + message.decode('utf-8') + '<br />'
-                    self.objHtml.AppendToPage(unicode(textoHTML))
-        except:
-            pass
-        #Ahora enviamos el texto si hemos pulsado alguna tecla
-        if self.envioPendiente:
-            self.envioDatagrama(True)
-
-    def envioDatagrama(self, pulsacion):
-        usuarioCadena = self.txtEntrada.GetValue()
-        if len(usuarioCadena) >= 1:
-            usuarioCadena = self.crypto.Encrypt(usuarioCadena.encode('utf-8')).encode('hex').encode('utf-8')
-            if pulsacion:
-                usuarioCadena = usuarioCadena + chr(95)
-        self.sock.sendto(usuarioCadena, self.send_address)
-        self.envioPendiente = False
-
->>>>>>> d6ff3b526459e090c638afb5f22eeff4a1d753a2
     def finalize(self):
         estado["x"] = self.frame.GetPosition().x
         estado["y"] = self.frame.GetPosition().y
