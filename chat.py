@@ -20,8 +20,11 @@ FIC_INI = 'chat.ini'
 SECCION_INI = 'CONFIG'
 SECCION_CON = 'CONTACTOS'
 MI_NUMERO = 0
+MI_CLAVE = ''
 estado = {}
 contactos = {}
+ventanas = {}
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 host = ''
 port = 0
 crypto = {}
@@ -49,7 +52,7 @@ class SimpleCrypt:
         try:
             return sha1(value).digest()
         except:
-            print "Exception due to ", value
+            print ("Exception due to " + value)
             return None
 
     """
@@ -167,132 +170,22 @@ class SimpleCrypt:
             data = self.SetDataVector(self.Cycle(data, params), params)
         return data.tostring()
 
-class chatUDPApp(wx.App):
-    envioPendiente = False
-
-    def OnInit(self):
-        self.initialize()
-        return True
-
-    def OnText(self, evt):
-        usuarioCadena = self.txtEntrada.GetValue()
-        if len(usuarioCadena) == 0:
-            #self.txtEscribiendo.SetLabel(unicode(''))
-            self.txtEscribiendo.SetValue(unicode(''))
-        if len(usuarioCadena) >= 1:
-            usuarioCadena = usuarioCadena.encode("iso-8859-1")
-            self.txtEscribiendo.SetValue(unicode(usuarioCadena+chr(95)))
-        evt.Skip()
-
-    def onMinimize(self, event):
-        a = 0
-
-    def OnClose(self, evt):
-        self.finalize()
-        evt.Skip()
-
-    def OnKey(self, evt):
-        code = evt.GetKeyCode()
-        if code == wx.WXK_LEFT:
-            self.objHtml.AppendToPage(unicode('izquierda <br />'))
-        elif code in (wx.WXK_RETURN, 370):
-            textoHTML = time.strftime("%H:%M:%S") + u' <strong><font face="dejavu sans" color="brown">T\xfa</font></strong>> ' + self.frame.txtEntrada.GetValue() + '<br />'
-            self.frame.objHtml.AppendToPage(unicode(textoHTML))
-            self.envioDatagrama(False)
-            self.frame.txtEntrada.SetValue('')
-        elif code == wx.WXK_ESCAPE:
-            self.finalize()
-            wx.GetApp().ExitMainLoop()
-            evt.Skip()
-        else:
-            self.envioPendiente = True
-        evt.Skip()
-
-    def OnTimer(self, event):
-        try:
-            # Buffer size is 8192. Change as needed.
-            message, address = self.sock.recvfrom(8192)
-            if message:
-                #print address[0], "> ", message
-                decryp = SimpleCrypt(INITKEY=address[0], CYCLES=3, BLOCK_SZ=25, KEY_ADV=5, KEY_MAGNITUDE=1)
-                if message[-1] == chr(95):
-                    message = message[:len(message)-1]
-                    message = decryp.Decrypt(message.decode('utf-8').decode('hex'))
-                    self.frame.txtEscribiendo.SetValue(unicode(message.decode('utf-8')))
-                else:
-                    self.frame.txtEscribiendo.SetValue('')
-                    message = decryp.Decrypt(message.decode('utf-8').decode('hex'))
-                    textoHTML = time.strftime("%H:%M:%S") + ' <strong><font face="helvetica" color="green">' + contactos[address[0]] + '</font></strong>> ' + message.decode('utf-8') + '<br />'
-                    self.frame.objHtml.AppendToPage(unicode(textoHTML))
-        except:
-            pass
-        #Ahora enviamos el texto si hemos pulsado alguna tecla
-        if self.envioPendiente:
-            self.envioDatagrama(True)
-
-    def envioDatagrama(self, pulsacion):
-        usuarioCadena = self.frame.txtEntrada.GetValue()
-        if len(usuarioCadena) >= 1:
-            usuarioCadena = self.crypto.Encrypt(usuarioCadena.encode('utf-8')).encode('hex').encode('utf-8')
-            if pulsacion:
-                usuarioCadena = usuarioCadena + chr(95)
-        self.sock.sendto(usuarioCadena, self.send_address)
-        self.envioPendiente = False
-
-    def initialize(self):
-       # self.res = xrc.XmlResource('chat.xrc')
-       # self.frame = self.res.LoadFrame(None, 'mainFrame')
-       # self.panel = xrc.XRCCTRL(self.frame, 'panel')
-       # self.txtEscribiendo = xrc.XRCCTRL(self.panel, 'txtEscribiendo')
-       # self.txtEntrada = xrc.XRCCTRL(self.panel, 'txtEntrada')
-       # self.objHtml = xrc.XRCCTRL(self.panel, 'objHtml')
-       # self.frame.Bind(wx.EVT_CLOSE, self.OnClose, id=xrc.XRCID('mainFrame'))
-       # self.Bind(wx.EVT_KEY_UP, self.OnKey)
-       # self.Bind(wx.EVT_CLOSE, self.OnClose)
-       # self.timer = wx.Timer(self)
-       # self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
-       # self.timer.Start(100)
-       # self.txtEntrada.SetFocus()
-       # self.txtEntrada.SetSelection(-1, -1)
-       # self.objHtml.AppendToPage('<p style="font-family: calibri, serif; font-size:14pt; font-style:italic">')
-       # self.frame.SetDimensions(int(estado["x"]), int(estado["y"]), int(estado["width"]), int(estado["height"]))
-       # self.sock = escuchaUDP(host, port)
-       # self.crypto = crypto
-       # #host = "10.0.2.15"
-       # #host = "192.168.5.51"
-       # self.send_address = ('192.168.5.51', int(3333)) # Set the address to send to
-       # return True
-
-        self.Bind(wx.EVT_KEY_UP, self.OnKey)
-        self.Bind(wx.EVT_CLOSE, self.OnClose)
-        self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
-        self.timer.Start(100)
-        self.sock = escuchaUDP(host, port)
-        self.crypto = crypto
-        self.send_address = (host, port) # Set the address to send to
-
-        #chat(None, -1, "A ver")
-        self.frame = chat(None, -1, 'Chat a ' + host + ' escuchando en el puerto ' + estado["puerto"])
-        return True
-
-    def finalize(self):
-        self.timer.Stop()
-        self.sock.close()
-        self.frame.finalize()
-        return True
-
+def crearVentanaChat(ipDestino, puertoDestino):
+	if not ipDestino in ventanas.keys():
+		ventanas[ipDestino] = chat(None, ipDestino, 'Chat a ' + ipDestino + ' en el puerto ' + str(puertoDestino))
+    
 def LeerFicheroIni(fichero):
     config = ConfigParser.ConfigParser()
     estadoAux = {}
+    contactoAux = {}
     if config.read(fichero):
         for clave in config.items(SECCION_INI):
             estadoAux[clave[0]] = config.get(SECCION_INI, clave[0])
         for clave in config.items(SECCION_CON):
-            contactos[clave[0]] = config.get(SECCION_CON, clave[0])
+            contactoAux[clave[0]] = config.get(SECCION_CON, clave[0])
     else:
         print("NO encuentro el fichero ")
-    return estadoAux
+    return estadoAux, contactoAux
 
 def obtieneIPLocal():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -317,50 +210,230 @@ def EscribirFicheroIni (fichero, estado):
     f.close()
 
 class chat(wx.Frame):
-    def __init__(self, parent, id, title):
-       # wx.Frame.__init__(self, parent, id, title)
+	envioPendiente = False
+	cryptoEnvio = None
+	lineasHtml = 0
 
-        self.envioPendiente = False
-        self.res = xrc.XmlResource('chat.xrc')
-        self.frame = self.res.LoadFrame(None, 'mainFrame')
-        self.panel = xrc.XRCCTRL(self.frame, 'panel')
-        self.txtEscribiendo = xrc.XRCCTRL(self.panel, 'txtEscribiendo')
-        self.txtEntrada = xrc.XRCCTRL(self.panel, 'txtEntrada')
-        self.objHtml = xrc.XRCCTRL(self.panel, 'objHtml')
-        self.frame.Bind(wx.EVT_CLOSE, self.OnClose, id=xrc.XRCID('mainFrame'))
-        self.txtEntrada.SetFocus()
-        self.txtEntrada.SetSelection(-1, -1)
-        self.objHtml.AppendToPage('<p style="font-family: calibri, serif; font-size:14pt; font-style:italic">')
-        self.frame.SetDimensions(int(estado["x"]), int(estado["y"]), int(estado["width"]), int(estado["height"]))
-        self.frame.SetTitle(title)
-        self.sock = escuchaUDP(host, port)
-        self.crypto = crypto
-        self.frame.Show()
+	def __init__(self, parent, id, title):
+		self.destino = id
+		self.envioPendiente = False
+		self.res = xrc.XmlResource('chat.xrc')
+		self.frame = self.res.LoadFrame(None, 'mainFrame')
+		self.panel = xrc.XRCCTRL(self.frame, 'panel')
+		self.txtEscribiendo = xrc.XRCCTRL(self.panel, 'txtEscribiendo')
+		self.txtEntrada = xrc.XRCCTRL(self.panel, 'txtEntrada')
+		self.objHtml = xrc.XRCCTRL(self.panel, 'objHtml')
+		self.frame.Bind(wx.EVT_CLOSE, self.OnClose, id=xrc.XRCID('mainFrame'))
+		self.txtEntrada.SetFocus()
+		self.txtEntrada.SetSelection(-1, -1)
+		self.objHtml.AppendToPage('<p style="font-family: calibri, serif; font-size:14pt; font-style:italic">')
+		self.frame.SetDimensions(int(estado["x"]), int(estado["y"]), int(estado["width"]), int(estado["height"]))
+		self.frame.SetTitle(title)
+		self.crypto = crypto
+		self.txtEntrada.Bind(wx.EVT_KEY_UP, self.OnKey)
+		self.cryptoEnvio = SimpleCrypt(INITKEY=id, CYCLES=3, BLOCK_SZ=25, KEY_ADV=5, KEY_MAGNITUDE=1)
+		self.send_address = (id, port)
+		self.frame.Show()
 
-    def OnClose(self, evt):
-        self.finalize()
-        evt.Skip()
+	def OnClose(self, evt):
+		self.finalize()
+		evt.Skip()
+		
+	def OnKey(self, evt):
+		code = evt.GetKeyCode()
 
-    def finalize(self):
-        estado["x"] = self.frame.GetPosition().x
-        estado["y"] = self.frame.GetPosition().y
-        estado["width"] = self.frame.GetSize().width
-        estado["height"] = self.frame.GetSize().height
-        EscribirFicheroIni(FIC_INI, estado)
-        return True
+		if code == wx.WXK_LEFT:
+			self.objHtml.AppendToPage(unicode('izquierda <br />'))
+		elif code in (wx.WXK_RETURN, 370):
+			textoHTML = time.strftime("%H:%M:%S") + u' <strong><font face="dejavu sans" color="brown">T\xfa</font></strong>> ' + self.txtEntrada.GetValue() + '<br />'
+			self.objHtml.AppendToPage(unicode(textoHTML))
+			self.lineasHtml = self.lineasHtml + 1 
+			self.objHtml.Scroll(0, self.lineasHtml)
+			self.envioDatagrama(False)
+			self.txtEntrada.SetValue('')
+		elif code == wx.WXK_ESCAPE:
+			self.frame.Close()
+			#wx.GetApp().ExitMainLoop()
+		else:
+			self.envioPendiente = True
+		evt.Skip()
+
+	def OnText(self, evt):
+		usuarioCadena = self.txtEntrada.GetValue()
+		if len(usuarioCadena) == 0:
+			self.txtEscribiendo.SetValue(unicode(''))
+		if len(usuarioCadena) >= 1:
+			usuarioCadena = usuarioCadena.encode("iso-8859-1")
+			self.txtEscribiendo.SetValue(unicode(usuarioCadena+chr(95)))
+		evt.Skip()
+
+	def envioDatagrama(self, pulsacion):
+		usuarioCadena = self.txtEntrada.GetValue()
+		if len(usuarioCadena) >= 1:
+			usuarioCadena = self.cryptoEnvio.Encrypt(usuarioCadena.encode('utf-8')).encode('hex').encode('utf-8')
+			if pulsacion:
+				usuarioCadena = usuarioCadena + chr(95)
+		sock.sendto(usuarioCadena, self.send_address)
+		self.envioPendiente = False
+
+	def finalize(self):
+		#estado["x"] = self.frame.GetPosition().x
+		#estado["y"] = self.frame.GetPosition().y
+		#estado["width"] = self.frame.GetSize().width
+		#estado["height"] = self.frame.GetSize().height
+		#EscribirFicheroIni(FIC_INI, estado)
+		print ventanas.keys()
+		del ventanas[self.destino]
+		return True
+		
+	def mensajeRecibido(self, msg):
+		if len(msg) == 0:
+			self.txtEscribiendo.SetValue(unicode(''))
+		elif msg[-1] == chr(95):
+			msg = msg[:len(msg)-1]
+			msg = self.cryptoEnvio.Decrypt(msg.decode('utf-8').decode('hex'))
+			self.txtEscribiendo.SetValue(unicode(msg.decode('utf-8')))
+		else:
+			msg = self.cryptoEnvio.Decrypt(msg.decode('utf-8').decode('hex'))
+			textoHTML = time.strftime("%H:%M:%S") + ' <strong><font face="helvetica" color="green">' + contactos[self.destino] + '</font></strong>> ' + msg.decode('utf-8') + '<br />'
+			self.txtEscribiendo.SetValue(unicode(''))
+			self.objHtml.AppendToPage(unicode(textoHTML))
+			self.lineasHtml = self.lineasHtml + 1 
+			self.objHtml.Scroll(0, self.lineasHtml)
+
+class chatUDPApp(wx.App):
+	def initialize(self):
+		self.timer = wx.Timer(self)
+		self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
+		self.timer.Start(100)
+		self.crypto = crypto
+		self.frame = principal(None, -1, 'Chat de ' + contactos[host] + ' escuchando en el puerto ' + estado["puerto"])
+		#self.frame.Bind(wx.EVT_KEY_UP, self.OnKey)
+		root = self.frame.objTree.AddRoot('Contactos')
+		for contacto in contactos:
+			os = self.frame.objTree.AppendItem(root, contactos[contacto])
+			self.frame.objTree.SetPyData(os, contacto)
+		self.frame.objTree.Expand(root)
+		#self.frame = chat(None, -1, 'Chat a ' + host + ' escuchando en el puerto ' + estado["puerto"])
+		return True
+
+	def OnInit(self):
+		self.initialize()
+		return True
+
+	def OnKey(self, evt):
+		code = evt.GetKeyCode()
+		print code
+		if code == wx.WXK_LEFT:
+			print "Left"
+		elif code == wx.WXK_ESCAPE:
+			self.finalize()
+			wx.GetApp().ExitMainLoop()
+		evt.Skip()
+
+	def onMinimize(self, event):
+		a = 0
+
+	def OnClose(self, evt):
+		self.finalize()
+		evt.Skip()
+		
+	def OnSelChanged(self, event):
+		'''Method called when selected item is changed
+		'''
+		item =  event.GetItem()
+		# Display the selected item text in the text widget
+		self.display.SetLabel(self.tree.GetItemText(item))
+
+	def OnTimer(self, event):
+		
+		message = None
+		try:
+			# Buffer size is 8192. Change as needed.
+			message, address = sock.recvfrom(8192)
+		except:
+			pass
+			
+		if message != None:
+			crearVentanaChat(address[0], address[1])
+			if message:
+				ventanas[address[0]].mensajeRecibido(message)
+				
+		#Ahora enviamos el texto si hemos pulsado alguna tecla
+		for ip,ventana in ventanas.iteritems():
+			if ventana.envioPendiente:
+				ventana.envioDatagrama(True)
+
+	def finalize(self):
+		# Guarda las coordenadas de la ventana principal
+		estado["x"] = self.frame.GetPosition().x
+		estado["y"] = self.frame.GetPosition().y
+		estado["width"] = self.frame.GetSize().width
+		estado["height"] = self.frame.GetSize().height
+		EscribirFicheroIni(FIC_INI, estado)
+
+		self.timer.Stop()
+		sock.close()
+		self.frame.finalize()
+		return True
+
+class principal(wx.Frame):
+	def __init__(self, parent, id, title):
+		self.res = xrc.XmlResource('principal.xrc')
+		self.frame = self.res.LoadFrame(None, 'mainFrame')
+		self.panel = xrc.XRCCTRL(self.frame, 'panel')
+		self.objTree = xrc.XRCCTRL(self.frame, 'objTree')
+		self.frame.Bind(wx.EVT_CLOSE, self.OnClose)
+		self.objTree.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnSelChanged)
+		self.objTree.Bind(wx.EVT_KEY_UP, self.OnKey)
+		self.frame.SetDimensions(int(estado["x"]), int(estado["y"]), int(estado["width"]), int(estado["height"]))
+		self.frame.SetTitle(title)
+		self.frame.Show()
+
+
+	def OnClose(self, evt):
+		self.finalize()
+		evt.Skip()
+		
+	def OnKey(self, evt):
+		code = evt.GetKeyCode()
+		if code == wx.WXK_ESCAPE:
+			self.finalize()
+			wx.GetApp().ExitMainLoop()
+		evt.Skip()
+
+	def finalize(self):
+		estado["x"] = self.frame.GetPosition().x
+		estado["y"] = self.frame.GetPosition().y
+		estado["width"] = self.frame.GetSize().width
+		estado["height"] = self.frame.GetSize().height
+		EscribirFicheroIni(FIC_INI, estado)
+		return True
+		
+	def OnSelChanged(self, evt):
+		item =  evt.GetItem()
+		ip = self.objTree.GetPyData(item)
+		# abrimos la ventana con la ip de contactos
+		crearVentanaChat(ip, int(3333))
+		evt.Skip()
 
 if __name__ == '__main__':
-    estado = LeerFicheroIni(FIC_INI)
+    estado, contactos = LeerFicheroIni(FIC_INI)
     MI_NUMERO = estado["mi_numero"]
     host = obtieneIPLocal()
     #Para pruebas borrar despues
-    host = '192.168.5.51'
+    #host = '192.168.5.51'
     #host = '192.168.0.40'
+    #La clave por defecto es la IP
+    MI_CLAVE = estado ["mi_clave"]
+    if len(MI_CLAVE) == 0:
+        MI_CLAVE = host
     #Inicializamos la clase para encriptar los mensajes. Comun a todos los remitentes
     crypto = SimpleCrypt(INITKEY=host, CYCLES=3, BLOCK_SZ=25, KEY_ADV=5, KEY_MAGNITUDE=1)
     port = int(estado["puerto"])
+    sock = escuchaUDP(host, port)
     print host
     print obtieneIPLocal()
 
-    app = chatUDPApp()
+    app = chatUDPApp(0)
     app.MainLoop()
